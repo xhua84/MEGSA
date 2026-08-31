@@ -1,5 +1,7 @@
 # MEGSA
 
+[![R-CMD-check](https://github.com/xhua84/MEGSA/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/xhua84/MEGSA/actions/workflows/R-CMD-check.yaml)
+
 MEGSA is a framework for analyzing mutual exclusivity of tumor mutations. It was originally developed to identify mutually exclusive gene sets using a likelihood ratio test and model selection procedure, with support for de novo discovery, pathway-guided searches, and expansion of established gene sets.
 
 This repository contains the formal R package version of MEGSA. The original public release was distributed as R scripts and example data through the National Cancer Institute Division of Cancer Epidemiology and Genetics (DCEG) website. The goal of this repository is to modernize that code into an installable, documented, tested R package.
