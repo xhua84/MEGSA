@@ -2,11 +2,34 @@
 
 MEGSA is a framework for analyzing mutual exclusivity of tumor mutations. It was originally developed to identify mutually exclusive gene sets using a likelihood ratio test and model selection procedure, with support for de novo discovery, pathway-guided searches, and expansion of established gene sets.
 
-This repository is being prepared as the formal R package version of MEGSA. The original public release was distributed as R scripts and example data through the National Cancer Institute Division of Cancer Epidemiology and Genetics (DCEG) website. The goal of this repository is to modernize that code into an installable, documented, tested R package.
+This repository contains the formal R package version of MEGSA. The original public release was distributed as R scripts and example data through the National Cancer Institute Division of Cancer Epidemiology and Genetics (DCEG) website. The goal of this repository is to modernize that code into an installable, documented, tested R package.
 
 ## Development Status
 
-The R package is under active development. Installation instructions, exported functions, examples, and tests will be added as the package structure is built.
+The R package is under active development. The initial package release includes documented functions, regression tests based on the original LAML example data, and optional parallel simulation support.
+
+## Installation
+
+```r
+install.packages("devtools")
+devtools::install_github("xhua84/MEGSA")
+```
+
+## Quick Start
+
+```r
+library(MEGSA)
+
+mutation_file <- system.file("extdata", "mutationMat_LAML.txt", package = "MEGSA")
+max_simu_file <- system.file("extdata", "maxSSimu_LAML.txt", package = "MEGSA")
+
+mutation_mat <- read_megsa_mutation_matrix(mutation_file)
+max_simu <- read_megsa_max_simu(max_simu_file)
+
+result <- megsa(mutation_mat, maxSSimu = max_simu, maxSize = 6)
+result
+as.data.frame(result)
+```
 
 ## Original Software
 

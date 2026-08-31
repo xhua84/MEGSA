@@ -1,0 +1,11 @@
+^\.git$
+^\.gitignore$
+^\.Rbuildignore$
+^LICENSE\.md$
+^\.Rproj\.user$
+^\.Rhistory$
+^\.RData$
+^\.Ruserdata$
+^.*\.tar\.gz$
+^.*\.Rcheck$
+^\.\.Rcheck$

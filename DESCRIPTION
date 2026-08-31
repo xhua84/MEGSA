@@ -1,0 +1,27 @@
+Package: MEGSA
+Type: Package
+Title: Mutual Exclusivity Gene Set Analysis
+Version: 1.0.0
+Authors@R: c(
+    person("Xing", "Hua", email = "xing.hua@nih.gov", role = c("aut", "cre")),
+    person("Jianxin", "Shi", role = "aut")
+    )
+Author: Xing Hua [aut, cre], Jianxin Shi [aut]
+Maintainer: Xing Hua <xing.hua@nih.gov>
+Description: Identifies mutually exclusive gene sets in tumor mutation
+    data using a likelihood ratio test and model selection procedure.
+    This package modernizes the original MEGSA R script bundle.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.1.0)
+Imports:
+    graphics,
+    grDevices,
+    stats,
+    utils
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

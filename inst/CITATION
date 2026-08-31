@@ -1,0 +1,23 @@
+citHeader("To cite MEGSA, please use:")
+
+citEntry(
+  entry = "Article",
+  title = "MEGSA: A Powerful and Flexible Framework for Analyzing Mutual Exclusivity of Tumor Mutations",
+  author = personList(
+    person("Xing", "Hua"),
+    person("Paula L.", "Hyland"),
+    person("Jing", "Huang"),
+    person("Lei", "Song"),
+    person("Bin", "Zhu"),
+    person("Neil E.", "Caporaso"),
+    person("Maria Teresa", "Landi"),
+    person("Nilanjan", "Chatterjee"),
+    person("Jianxin", "Shi")
+  ),
+  journal = "The American Journal of Human Genetics",
+  year = "2016",
+  volume = "98",
+  number = "3",
+  pages = "442--455",
+  doi = "10.1016/j.ajhg.2015.12.021"
+)
