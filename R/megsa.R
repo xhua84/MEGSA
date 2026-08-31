@@ -295,14 +295,11 @@ funGradient <- function(parVec, mutationMat, q = NULL) {
 #' @export
 funEstimate <- function(mutationMat, tol = 1e-7) {
   mutationMat <- normalize_mutation_matrix(mutationMat, min_cols = 1)
-  N <- nrow(mutationMat)
-  M <- ncol(mutationMat)
-  tempRowSums <- rowSums(mutationMat)
-  q <- as.vector(table(factor(tempRowSums, levels = 0:M)))
-  piHat <- colMeans(mutationMat)
-  probMat <- matrix(rep(piHat, each = N), N, M)
-  tempMat <- log(probMat^mutationMat * (1 - probMat)^(!mutationMat))
-  logL0 <- sum(rowSums(tempMat))
+  context <- estimate_context(mutationMat)
+  M <- context$M
+  tempRowSums <- context$row_sums
+  piHat <- context$pi
+  logL0 <- context$logL0
 
   tempOptim <- NULL
   for (eps in 10^(-((-log10(tol)):3))) {
@@ -311,13 +308,12 @@ funEstimate <- function(mutationMat, tol = 1e-7) {
     tempOptim <- try(
       stats::optim(
         start,
-        funLogLikelihood,
-        gr = funGradient,
+        context_log_likelihood,
+        gr = context_gradient,
         method = "L-BFGS-B",
         lower = c(0, rep(eps, M)),
         upper = rep(1 - eps, M + 1),
-        mutationMat = mutationMat,
-        q = q
+        context = context
       ),
       silent = TRUE
     )
@@ -355,6 +351,8 @@ funEstimate <- function(mutationMat, tol = 1e-7) {
 #' @param eps Tolerance used when comparing q-values during model selection.
 #' @param nPerm Number of local permutations for add/drop decisions.
 #' @param permResult Cached permutation results used internally.
+#' @param corMat Optional precomputed correlation matrix used internally by
+#'   the screened search strategy.
 #'
 #' @return Search/test functions return lists or matrices matching the
 #'   historical MEGSA script outputs.
@@ -365,7 +363,7 @@ NULL
 #' @rdname megsa_search
 #' @export
 funAdd1 <- function(geneStart, mutationMat, detail = TRUE,
-                    search = c("screened", "exhaustive")) {
+                    search = c("screened", "exhaustive"), corMat = NULL) {
   search <- match.arg(search)
   mutationMat <- normalize_mutation_matrix(mutationMat)
   geneAll <- colnames(mutationMat)
@@ -383,7 +381,7 @@ funAdd1 <- function(geneStart, mutationMat, detail = TRUE,
     stop("Candidate gene set must have at least one gene outside the start set.", call. = FALSE)
   }
 
-  tempOrder <- candidate_add_order(mutationMat, geneStart, geneCandidate, search)
+  tempOrder <- candidate_add_order(mutationMat, geneStart, geneCandidate, search, corMat = corMat)
   S <- rep(NA_real_, M1)
   for (i in tempOrder) {
     S[i] <- funEstimate(mutationMat[, c(geneStart, geneCandidate[i]), drop = FALSE])$S
@@ -413,8 +411,9 @@ funMaxS <- function(mutationMat, nPairStart = 10, maxSize = 6, detail = TRUE,
   nPairStart <- min(nPairStart, nPair)
   pairS <- rep(NA_real_, nPair)
   names(pairS) <- seq_len(nPair)
+  corMat <- if (search == "screened") safe_cor(mutationMat) else NULL
 
-  for (i in candidate_pair_order(mutationMat, nPairStart, search)) {
+  for (i in candidate_pair_order(mutationMat, nPairStart, search, corMat = corMat)) {
     pairS[i] <- funEstimate(mutationMat[, tempCombn[, i], drop = FALSE])$S
     if (detail) {
       cat(i, "\t", geneAll[tempCombn[, i]], pairS[i], "\n")
@@ -444,7 +443,13 @@ funMaxS <- function(mutationMat, nPairStart = 10, maxSize = 6, detail = TRUE,
     for (i in seq_len(nPairStart)) {
       tempGeneSet <- geneAll[startCombn[, i]]
       for (j in seq.int(2, maxSize - 1)) {
-        tempAdd <- funAdd1(tempGeneSet, mutationMat, detail = detail, search = search)
+        tempAdd <- funAdd1(
+          tempGeneSet,
+          mutationMat,
+          detail = detail,
+          search = search,
+          corMat = corMat
+        )
         tempGeneSet <- tempAdd$gene
         maxSMat[i, j] <- tempAdd$S
         geneMat[i, j + 1] <- tempGeneSet[j + 1]
@@ -502,7 +507,8 @@ funMaxSSimu <- function(mutationMat, nSimu = 1000, nPairStart = 10,
         "funMaxS", "funAdd1", "funEstimate", "funLogLikelihood",
         "funGradient", "normalize_mutation_matrix", "candidate_pair_order",
         "candidate_add_order", "safe_cor", "mutation_patterns",
-        "row_pattern_index", "validate_positive_integer"
+        "row_pattern_index", "estimate_context", "context_log_likelihood",
+        "context_gradient", "validate_positive_integer"
       ),
       envir = parent.env(environment())
     )
@@ -1028,36 +1034,149 @@ normalize_max_simu_matrix <- function(maxSSimu) {
   maxSSimu
 }
 
-mutation_patterns <- function(M) {
-  tempA <- matrix(FALSE, 2^M, M)
-  for (i in seq_len(M)) {
-    tempA[, i] <- rep(rep(c(FALSE, TRUE), each = 2^(M - i)), 2^(i - 1))
-  }
-  tempA
+estimate_context <- function(mutationMat) {
+  N <- nrow(mutationMat)
+  M <- ncol(mutationMat)
+  row_sums <- rowSums(mutationMat)
+  pi_hat <- colMeans(mutationMat)
+  gene_counts <- colSums(mutationMat)
+  absent_counts <- N - gene_counts
+  present_log <- numeric(M)
+  absent_log <- numeric(M)
+  has_mutations <- gene_counts > 0
+  has_absent <- absent_counts > 0
+  present_log[has_mutations] <- gene_counts[has_mutations] * log(pi_hat[has_mutations])
+  absent_log[has_absent] <- absent_counts[has_absent] * log1p(-pi_hat[has_absent])
+
+  list(
+    mutationMat = mutationMat,
+    N = N,
+    M = M,
+    row_sums = row_sums,
+    q = as.vector(table(factor(row_sums, levels = 0:M))),
+    pi = pi_hat,
+    logL0 = sum(present_log + absent_log),
+    patterns = mutation_patterns(M),
+    row_index = row_pattern_index(mutationMat)
+  )
 }
+
+context_log_likelihood <- function(parVec, context) {
+  gamma <- parVec[1]
+  delta <- parVec[-1]
+  M <- context$M
+  q <- context$q
+
+  if (length(delta) == 1) {
+    J <- seq_len(M)
+    logL <- M * q[1] * log(1 - delta) + q[1] * log(1 - gamma) +
+      sum(q[-1] * (
+        log(J / M) + (J - 1) * log(delta) + (M - J) * log(1 - delta) +
+          log(M / J * delta * (1 - gamma) + gamma)
+      ))
+  } else if (length(delta) == M) {
+    tempA <- context$patterns
+    nPattern <- nrow(tempA)
+    tempProbMat <- matrix(delta, nPattern, M, byrow = TRUE)
+    tempProbMat[!tempA] <- 1 - tempProbMat[!tempA]
+    tempProd <- apply(tempProbMat, 1, prod)
+    tempMat <- rep(delta / sum(delta), each = nPattern) * tempA * (tempProd / tempProbMat)
+    tempProb <- (1 - gamma) * tempProd + gamma * rowSums(tempMat)
+    prob <- tempProb[context$row_index]
+    logL <- sum(log(prob))
+  } else {
+    stop("Invalid value of delta.", call. = FALSE)
+  }
+
+  -logL
+}
+
+context_gradient <- function(parVec, context) {
+  gamma <- parVec[1]
+  delta <- parVec[-1]
+  M <- context$M
+  if (length(delta) == 1) {
+    delta <- rep(delta, M)
+  }
+  if (length(delta) != M) {
+    stop("Invalid value of delta.", call. = FALSE)
+  }
+
+  sumDelta <- sum(delta)
+  tempA <- context$patterns
+  nPattern <- nrow(tempA)
+  tempProbMat1 <- tempProbMat2 <- matrix(delta, nPattern, M, byrow = TRUE)
+  tempProbMat2[!tempA] <- 1 - tempProbMat1[!tempA]
+  temp1 <- apply(tempProbMat2, 1, prod)
+  temp2 <- temp1 / tempProbMat2
+  tempProbMat3 <- tempProbMat1 / sumDelta * tempA * temp2
+  temp3 <- rowSums(tempProbMat3)
+  tempProb <- (1 - gamma) * temp1 + gamma * temp3
+  tempGradGamma <- (temp3 - temp1) / tempProb
+  tempGradMat <- matrix(NA_real_, nPattern, M)
+  temp4 <- (1 - gamma) * (tempA * 2 - 1) * temp2
+  temp5 <- (sumDelta - delta) / sumDelta^2
+  temp6 <- rep(temp5, each = nPattern) * tempA * temp2
+  for (i in seq_len(M)) {
+    temp7 <- -tempProbMat1[, -i, drop = FALSE] / sumDelta^2 *
+      tempA[, -i, drop = FALSE] * temp2[, -i, drop = FALSE] +
+      tempProbMat1[, -i, drop = FALSE] / sumDelta *
+        tempA[, -i, drop = FALSE] *
+        (temp2[, -i, drop = FALSE] / tempProbMat2[, i] * (tempA[, i] * 2 - 1))
+    tempGradMat[, i] <- temp4[, i] + gamma * (temp6[, i] + rowSums(temp7))
+  }
+  tempGradMat <- tempGradMat / tempProb
+  tempIdx <- context$row_index
+  grad <- c(sum(tempGradGamma[tempIdx]), colSums(tempGradMat[tempIdx, , drop = FALSE]))
+
+  -grad
+}
+
+mutation_patterns <- local({
+  cache <- new.env(parent = emptyenv())
+
+  function(M) {
+    key <- as.character(M)
+    if (exists(key, envir = cache, inherits = FALSE)) {
+      return(get(key, envir = cache, inherits = FALSE))
+    }
+
+    tempA <- matrix(FALSE, 2^M, M)
+    for (i in seq_len(M)) {
+      tempA[, i] <- rep(rep(c(FALSE, TRUE), each = 2^(M - i)), 2^(i - 1))
+    }
+    assign(key, tempA, envir = cache)
+    tempA
+  }
+})
 
 row_pattern_index <- function(mutationMat) {
   as.integer(colSums(t(mutationMat) * 2^((ncol(mutationMat) - 1):0)) + 1)
 }
 
-candidate_add_order <- function(mutationMat, geneStart, geneCandidate, search) {
+candidate_add_order <- function(mutationMat, geneStart, geneCandidate, search,
+                                corMat = NULL) {
   M1 <- length(geneCandidate)
   if (search == "exhaustive") {
     return(seq_len(M1))
   }
-  corMat <- safe_cor(mutationMat)
+  if (is.null(corMat)) {
+    corMat <- safe_cor(mutationMat)
+  }
   tempMat <- corMat[geneStart, geneCandidate, drop = FALSE]
   tempVec <- colSums(tempMat / (1 - tempMat^2))
   seq_len(M1)[utils::head(order(tempVec, na.last = TRUE), min(max(floor(M1 * 0.1), 5), M1))]
 }
 
-candidate_pair_order <- function(mutationMat, nPairStart, search) {
+candidate_pair_order <- function(mutationMat, nPairStart, search, corMat = NULL) {
   M <- ncol(mutationMat)
   nPair <- choose(M, 2)
   if (search == "exhaustive") {
     return(seq_len(nPair))
   }
-  corMat <- safe_cor(mutationMat)
+  if (is.null(corMat)) {
+    corMat <- safe_cor(mutationMat)
+  }
   corVec <- corMat[lower.tri(corMat)]
   seq_len(nPair)[utils::head(order(corVec, na.last = TRUE), min(nPairStart * 5, nPair))]
 }
