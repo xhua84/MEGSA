@@ -15,7 +15,8 @@ funAdd1(
   geneStart,
   mutationMat,
   detail = TRUE,
-  search = c("screened", "exhaustive")
+  search = c("screened", "exhaustive"),
+  corMat = NULL
 )
 
 funMaxS(
@@ -94,6 +95,9 @@ genes in columns. Non-zero numeric values are treated as mutations.}
 \item{search}{Search strategy. \code{"screened"} uses the 2016 correlation
 screening heuristic; \code{"exhaustive"} evaluates all candidate pairs and
 additions as in the earlier script release.}
+
+\item{corMat}{Optional precomputed correlation matrix used internally by
+the screened search strategy.}
 
 \item{nPairStart}{Number of starting gene pairs for the forward search.}
 
