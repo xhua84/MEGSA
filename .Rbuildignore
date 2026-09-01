@@ -10,3 +10,5 @@
 ^.*\.tar\.gz$
 ^.*\.Rcheck$
 ^\.\.Rcheck$
+^\.Rd2pdf.*$
+^MEGSA-reference-manual\.pdf$

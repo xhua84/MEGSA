@@ -47,6 +47,29 @@ max_simu <- funMaxSSimu(
 )
 ```
 
+## Documentation
+
+The package vignette provides a practical user guide:
+
+```r
+vignette("MEGSA", package = "MEGSA")
+```
+
+When installing from GitHub, build vignettes explicitly if you want them
+available through `vignette()`:
+
+```r
+devtools::install_github("xhua84/MEGSA", build_vignettes = TRUE)
+```
+
+The function reference manual is generated from the package documentation:
+
+```sh
+Rscript --vanilla tools/build_reference_manual.R
+```
+
+This writes `MEGSA-reference-manual.pdf` in the package root.
+
 ## Original Software
 
 The original MEGSA source-code bundle is available from the DCEG tool page:

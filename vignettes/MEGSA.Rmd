@@ -1,0 +1,132 @@
+---
+title: "MEGSA: Mutual Exclusivity Gene Set Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{MEGSA: Mutual Exclusivity Gene Set Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+## Overview
+
+MEGSA analyzes mutual exclusivity among tumor mutations. The package takes a
+binary mutation matrix with samples in rows and genes in columns, searches for
+mutually exclusive gene sets, and evaluates them with a likelihood ratio test.
+
+The formal method is described in:
+
+Hua X, Hyland PL, Huang J, Song L, Zhu B, Caporaso NE, Landi MT, Chatterjee N,
+Shi J. 2016. MEGSA: A powerful and flexible framework for analyzing mutual
+exclusivity of tumor mutations. *The American Journal of Human Genetics*
+98(3):442-455. <https://doi.org/10.1016/j.ajhg.2015.12.021>
+
+## Input Data
+
+The main input is a logical or numeric matrix. Non-zero values are treated as
+mutations. Row names should identify samples and column names should identify
+genes.
+
+```{r load-data}
+library(MEGSA)
+
+mutation_file <- system.file("extdata", "mutationMat_LAML.txt", package = "MEGSA")
+max_simu_file <- system.file("extdata", "maxSSimu_LAML.txt", package = "MEGSA")
+
+mutation_mat <- read_megsa_mutation_matrix(mutation_file)
+max_simu <- read_megsa_max_simu(max_simu_file)
+
+dim(mutation_mat)
+dim(max_simu)
+mutation_mat[1:5, 1:5]
+```
+
+`max_simu` is a precomputed null distribution. Its rows are simulations and its
+columns correspond to gene-set sizes 2 through `maxSize`.
+
+## Global Mutual Exclusivity Test
+
+Use `funGlobalTest()` when you want to test whether the mutation matrix contains
+stronger mutual exclusivity than expected under the null distribution.
+
+```{r global-test}
+global_test <- funGlobalTest(
+  mutation_mat,
+  maxSSimu = max_simu,
+  maxSize = 6,
+  detail = FALSE
+)
+
+global_test$p
+round(global_test$maxSReal, 3)
+```
+
+The `p` value is the global empirical p-value. `maxSReal` reports the maximum
+test statistic observed for each gene-set size.
+
+## Searching for Gene Sets
+
+Use `megsa()` or `funSelect()` for the full gene-set selection workflow. This
+step can be slower than the global test because it includes additional
+permutation-based add/drop decisions.
+
+```{r full-selection, eval=FALSE}
+result <- megsa(
+  mutation_mat,
+  maxSSimu = max_simu,
+  maxSize = 6,
+  level = 0.05,
+  detail = FALSE
+)
+
+result
+as.data.frame(result)
+```
+
+## Simulating a Null Distribution
+
+If a precomputed null distribution is not supplied, MEGSA can generate one by
+permuting each gene column independently. Use `ncores` for parallel simulation
+and `seed` for reproducibility.
+
+```{r simulate-null, eval=FALSE}
+max_simu_new <- funMaxSSimu(
+  mutation_mat,
+  nSimu = 1000,
+  nPairStart = 10,
+  maxSize = 6,
+  ncores = 2,
+  seed = 1,
+  detail = FALSE
+)
+```
+
+When `seed` is supplied, MEGSA uses the same per-simulation permutations
+regardless of the number of workers.
+
+## Exporting Results
+
+The `megsa()` wrapper can write a result table and plots directly.
+
+```{r export-results, eval=FALSE}
+result <- megsa(
+  mutation_mat,
+  maxSSimu = max_simu,
+  maxSize = 6,
+  resultTableFile = "MEGSA_results.txt",
+  figureDir = "MEGSA_figures",
+  type = "pdf",
+  detail = FALSE
+)
+```
+
+`funPrintMEGS()` returns the same table as a data frame when no output path is
+provided. `funPlotMEGS()` writes one figure per selected gene set.

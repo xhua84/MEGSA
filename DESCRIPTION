@@ -1,7 +1,7 @@
 Package: MEGSA
 Type: Package
 Title: Mutual Exclusivity Gene Set Analysis
-Version: 1.0.1
+Version: 1.0.1.9000
 Authors@R: c(
     person("Xing", "Hua", email = "xing.hua@nih.gov", role = c("aut", "cre")),
     person("Jianxin", "Shi", role = "aut")
@@ -23,5 +23,8 @@ Imports:
     stats,
     utils
 Suggests:
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
