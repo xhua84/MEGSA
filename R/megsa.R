@@ -16,7 +16,9 @@
 #'   screening heuristic; `"exhaustive"` evaluates all candidate pairs and
 #'   additions as in the earlier script release.
 #' @param ncores Number of parallel worker processes for simulations.
-#' @param seed Optional random seed for simulation reproducibility.
+#' @param seed Optional random seed for simulation reproducibility. Seeded
+#'   simulations use the same per-simulation permutations regardless of
+#'   `ncores`.
 #' @param resultTableFile Optional output path for a tab-delimited MEGS table.
 #' @param figureDir Optional output directory for MEGS plots.
 #' @param type Figure file type: `"pdf"`, `"png"`, or `"jpg"`.
@@ -474,8 +476,18 @@ funMaxSSimu <- function(mutationMat, nSimu = 1000, nPairStart = 10,
   N <- nrow(mutationMat)
   M <- ncol(mutationMat)
   ncores <- min(ncores, nSimu)
+  simulationSeeds <- NULL
+  if (!is.null(seed)) {
+    rngState <- capture_rng_state()
+    on.exit(restore_rng_state(rngState), add = TRUE)
+    set.seed(seed)
+    simulationSeeds <- sample.int(.Machine$integer.max, nSimu)
+  }
 
   simulate_one <- function(s) {
+    if (!is.null(simulationSeeds)) {
+      set.seed(simulationSeeds[s])
+    }
     permutationMat <- mutationMat
     for (j in seq_len(M)) {
       permutationMat[, j] <- mutationMat[sample.int(N), j]
@@ -494,9 +506,6 @@ funMaxSSimu <- function(mutationMat, nSimu = 1000, nPairStart = 10,
   }
 
   if (ncores == 1) {
-    if (!is.null(seed)) {
-      set.seed(seed)
-    }
     maxSMats <- lapply(seq_len(nSimu), simulate_one)
   } else {
     cl <- parallel::makeCluster(ncores)
@@ -512,9 +521,6 @@ funMaxSSimu <- function(mutationMat, nSimu = 1000, nPairStart = 10,
       ),
       envir = parent.env(environment())
     )
-    if (!is.null(seed)) {
-      parallel::clusterSetRNGStream(cl, seed)
-    }
     maxSMats <- parallel::parLapply(cl, seq_len(nSimu), simulate_one)
   }
 
@@ -1152,6 +1158,23 @@ mutation_patterns <- local({
 
 row_pattern_index <- function(mutationMat) {
   as.integer(colSums(t(mutationMat) * 2^((ncol(mutationMat) - 1):0)) + 1)
+}
+
+capture_rng_state <- function() {
+  has_seed <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  list(
+    has_seed = has_seed,
+    seed = if (has_seed) get(".Random.seed", envir = .GlobalEnv, inherits = FALSE) else NULL
+  )
+}
+
+restore_rng_state <- function(state) {
+  if (state$has_seed) {
+    assign(".Random.seed", state$seed, envir = .GlobalEnv)
+  } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    rm(".Random.seed", envir = .GlobalEnv)
+  }
+  invisible(NULL)
 }
 
 candidate_add_order <- function(mutationMat, geneStart, geneCandidate, search,

@@ -49,7 +49,9 @@ additions as in the earlier script release.}
 
 \item{ncores}{Number of parallel worker processes for simulations.}
 
-\item{seed}{Optional random seed for simulation reproducibility.}
+\item{seed}{Optional random seed for simulation reproducibility. Seeded
+simulations use the same per-simulation permutations regardless of
+\code{ncores}.}
 }
 \value{
 A MEGSA result object.
