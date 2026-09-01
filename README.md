@@ -33,6 +33,20 @@ result
 as.data.frame(result)
 ```
 
+## Parallel Simulation
+
+```r
+max_simu <- funMaxSSimu(
+  mutation_mat,
+  nSimu = 100,
+  nPairStart = 10,
+  maxSize = 6,
+  ncores = 2,
+  seed = 1,
+  detail = FALSE
+)
+```
+
 ## Original Software
 
 The original MEGSA source-code bundle is available from the DCEG tool page:

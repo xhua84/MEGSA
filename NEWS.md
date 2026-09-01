@@ -8,8 +8,9 @@
 - Reused the screened-search correlation matrix within `funMaxS()`.
 - Added `tools/benchmark_laml.R` for repeatable local timing checks with the
   bundled LAML example data.
-- Planned the MEGSA 1.0.1 release to include the parallel simulation interface
-  through the `ncores` argument.
+- Added the parallel simulation interface for MEGSA 1.0.1 through the `ncores`
+  argument.
+- Made seeded null-distribution simulations reproducible across worker counts.
 
 # MEGSA 1.0.0
 

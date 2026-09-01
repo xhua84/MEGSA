@@ -43,7 +43,9 @@ additions as in the earlier script release.}
 
 \item{ncores}{Number of parallel worker processes for simulations.}
 
-\item{seed}{Optional random seed for simulation reproducibility.}
+\item{seed}{Optional random seed for simulation reproducibility. Seeded
+simulations use the same per-simulation permutations regardless of
+\code{ncores}.}
 
 \item{resultTableFile}{Optional output path for a tab-delimited MEGS table.}
 

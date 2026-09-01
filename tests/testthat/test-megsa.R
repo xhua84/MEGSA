@@ -78,6 +78,52 @@ test_that("parallel simulations return the expected shape", {
   expect_equal(dim(maxSSimu), c(2L, 2L))
 })
 
+test_that("seeded simulations are reproducible across worker counts", {
+  set.seed(5)
+  mutationMat <- simulate_mutation_matrix(20, 4, list(pi = 0.1), "H0")
+
+  sequential <- funMaxSSimu(
+    mutationMat,
+    nSimu = 3,
+    nPairStart = 2,
+    maxSize = 3,
+    detail = FALSE,
+    ncores = 1,
+    seed = 6
+  )
+  parallel <- funMaxSSimu(
+    mutationMat,
+    nSimu = 3,
+    nPairStart = 2,
+    maxSize = 3,
+    detail = FALSE,
+    ncores = 2,
+    seed = 6
+  )
+
+  expect_equal(parallel, sequential)
+})
+
+test_that("seeded simulations preserve the caller RNG stream", {
+  set.seed(7)
+  expected <- runif(3)
+
+  set.seed(7)
+  mutationMat <- simulate_mutation_matrix(20, 4, list(pi = 0.1), "H0")
+  set.seed(7)
+  invisible(funMaxSSimu(
+    mutationMat,
+    nSimu = 2,
+    nPairStart = 2,
+    maxSize = 3,
+    detail = FALSE,
+    ncores = 2,
+    seed = 8
+  ))
+
+  expect_equal(runif(3), expected)
+})
+
 test_that("empty MEGS results can be formatted and plotted", {
   mutationMat <- matrix(
     FALSE,
