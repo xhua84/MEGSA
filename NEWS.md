@@ -1,16 +1,15 @@
-# MEGSA 1.0.0.9000
+# MEGSA 1.0.1
 
-## Development
-
-- Started development toward MEGSA 1.0.1.
+- Added GitHub Actions continuous integration for `R CMD check`.
 - Optimized likelihood setup in `funEstimate()` by reusing per-gene-set
   quantities during optimizer calls.
 - Reused the screened-search correlation matrix within `funMaxS()`.
 - Added `tools/benchmark_laml.R` for repeatable local timing checks with the
   bundled LAML example data.
-- Added the parallel simulation interface for MEGSA 1.0.1 through the `ncores`
-  argument.
-- Made seeded null-distribution simulations reproducible across worker counts.
+- Documented and stabilized the parallel simulation interface through the
+  `ncores` argument.
+- Made seeded null-distribution simulations reproducible across worker counts
+  and preserved the caller RNG stream when `seed` is supplied.
 
 # MEGSA 1.0.0
 
@@ -19,4 +18,3 @@
   documentation, and citation metadata.
 - Added regression tests based on the original LAML example data.
 - Added bundled example data under `inst/extdata`.
-- Added GitHub Actions continuous integration for `R CMD check`.
