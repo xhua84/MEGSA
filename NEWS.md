@@ -1,9 +1,11 @@
-# MEGSA 1.0.1.9000
+# MEGSA 1.0.2
 
 - Added a package vignette as a practical user guide for input files, global
   testing, null-distribution simulation, and result export.
 - Added a helper script for generating the PDF function reference manual from
   the package Rd documentation.
+- Added a README workflow section with links to the published paper figures and
+  package-generated LAML example output plots.
 - Updated GitHub Actions to build and check package vignettes.
 
 # MEGSA 1.0.1
